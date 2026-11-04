@@ -1,56 +1,27 @@
 package ru.muravyev.rbpolab1.repository;
 
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import ru.muravyev.rbpolab1.entity.ParticipationStatus;
 import ru.muravyev.rbpolab1.entity.SurveyAnswer;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-@Repository
-public class SurveyAnswerRepository {
+public interface SurveyAnswerRepository extends JpaRepository<SurveyAnswer, Long> {
 
-    private final Map<Long, SurveyAnswer> storage = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong();
+    boolean existsByParticipation_IdAndQuestion_Id(Long participationId, Long questionId);
 
-    public List<SurveyAnswer> findAll() {
-        return new ArrayList<>(storage.values());
-    }
+    List<SurveyAnswer> findByParticipation_Id(Long participationId);
 
-    public Optional<SurveyAnswer> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
-    }
-
-    public List<SurveyAnswer> findByParticipationId(Long participationId) {
-        return storage.values().stream()
-                .filter(a -> a.getParticipationId().equals(participationId))
-                .toList();
-    }
-
-    public List<SurveyAnswer> findByQuestionId(Long questionId) {
-        return storage.values().stream()
-                .filter(a -> a.getQuestionId().equals(questionId))
-                .toList();
-    }
-
-    public boolean existsByParticipationIdAndQuestionId(Long participationId, Long questionId) {
-        return storage.values().stream()
-                .anyMatch(a -> a.getParticipationId().equals(participationId)
-                        && a.getQuestionId().equals(questionId));
-    }
-
-    public SurveyAnswer save(SurveyAnswer answer) {
-        if (answer.getId() == null) {
-            answer.setId(idGenerator.incrementAndGet());
-        }
-        storage.put(answer.getId(), answer);
-        return answer;
-    }
-
-    public void deleteById(Long id) {
-        storage.remove(id);
-    }
+    // Сколько раз выбран каждый вариант каждого вопроса (только в участиях с нужным статусом)
+    @Query("""
+            select a.question.id as questionId, a.value as optionValue, count(a) as total
+            from SurveyAnswer a
+            where a.participation.survey.id = :surveyId
+              and a.participation.status = :status
+            group by a.question.id, a.value
+            """)
+    List<AnswerCountView> countAnswers(@Param("surveyId") Long surveyId,
+                                       @Param("status") ParticipationStatus status);
 }

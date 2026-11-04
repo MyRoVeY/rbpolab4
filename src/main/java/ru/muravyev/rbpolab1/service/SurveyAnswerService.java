@@ -1,6 +1,7 @@
 package ru.muravyev.rbpolab1.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.muravyev.rbpolab1.entity.ParticipationStatus;
 import ru.muravyev.rbpolab1.entity.SurveyAnswer;
 import ru.muravyev.rbpolab1.entity.SurveyParticipation;
@@ -13,6 +14,7 @@ import ru.muravyev.rbpolab1.repository.SurveyQuestionRepository;
 import java.util.List;
 
 @Service
+@Transactional
 public class SurveyAnswerService {
 
     private final SurveyAnswerRepository answerRepository;
@@ -27,10 +29,12 @@ public class SurveyAnswerService {
         this.questionRepository = questionRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<SurveyAnswer> getAll() {
         return answerRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public SurveyAnswer getById(Long id) {
         return answerRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Answer " + id + " not found"));
@@ -40,20 +44,20 @@ public class SurveyAnswerService {
         SurveyParticipation participation = findParticipation(participationId);
         SurveyQuestion question = findQuestion(questionId);
 
-        checkNotSubmitted(participation);
-        if (!question.getSurveyId().equals(participation.getSurveyId())) {
+        checkInProgress(participation);
+        if (!question.getSurvey().getId().equals(participation.getSurvey().getId())) {
             throw new IllegalArgumentException("Question " + questionId
                     + " does not belong to the survey of participation " + participationId);
         }
-        if (answerRepository.existsByParticipationIdAndQuestionId(participationId, questionId)) {
-            throw new IllegalArgumentException("Question " + questionId
+        if (answerRepository.existsByParticipation_IdAndQuestion_Id(participationId, questionId)) {
+            throw new IllegalStateException("Question " + questionId
                     + " is already answered in participation " + participationId);
         }
         checkValue(question, value);
 
         SurveyAnswer answer = new SurveyAnswer();
-        answer.setParticipationId(participationId);
-        answer.setQuestionId(questionId);
+        answer.setParticipation(participation);
+        answer.setQuestion(question);
         answer.setValue(value);
         return answerRepository.save(answer);
     }
@@ -63,27 +67,14 @@ public class SurveyAnswerService {
         if (value == null) {
             return answer;
         }
-        checkNotSubmitted(findParticipation(answer.getParticipationId()));
-        checkValue(findQuestion(answer.getQuestionId()), value);
+        checkInProgress(answer.getParticipation());
+        checkValue(answer.getQuestion(), value);
         answer.setValue(value);
         return answerRepository.save(answer);
     }
 
     public void delete(Long id) {
-        getById(id);
-        answerRepository.deleteById(id);
-    }
-
-    public void deleteByParticipationId(Long participationId) {
-        for (SurveyAnswer a : answerRepository.findByParticipationId(participationId)) {
-            answerRepository.deleteById(a.getId());
-        }
-    }
-
-    public void deleteByQuestionId(Long questionId) {
-        for (SurveyAnswer a : answerRepository.findByQuestionId(questionId)) {
-            answerRepository.deleteById(a.getId());
-        }
+        answerRepository.delete(getById(id));
     }
 
     private SurveyParticipation findParticipation(Long id) {
@@ -102,10 +93,10 @@ public class SurveyAnswerService {
                 .orElseThrow(() -> new NotFoundException("Question " + id + " not found"));
     }
 
-    private void checkNotSubmitted(SurveyParticipation participation) {
-        if (participation.getStatus() == ParticipationStatus.SUBMITTED) {
-            throw new IllegalArgumentException("Participation " + participation.getId()
-                    + " is already submitted");
+    private void checkInProgress(SurveyParticipation participation) {
+        if (participation.getStatus() != ParticipationStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Participation " + participation.getId()
+                    + " is " + participation.getStatus() + ", answers cannot be changed");
         }
     }
 

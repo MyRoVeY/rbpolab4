@@ -49,9 +49,13 @@ public class SurveyParticipationController {
         participationService.delete(id);
         return ResponseEntity.noContent().build();
     }
+    @PostMapping("/{id}/submit")
+    public SurveyParticipationResponse submit(@PathVariable Long id) {
+        return toResponse(participationService.submit(id));
+    }
 
     private SurveyParticipationResponse toResponse(SurveyParticipation p) {
-        return new SurveyParticipationResponse(p.getId(), p.getSurveyId(), p.getRespondentId(),
-                p.getStatus(), p.getStartedAt(), p.getSubmittedAt());
+        return new SurveyParticipationResponse(p.getId(), p.getSurvey().getId(),
+                p.getRespondent().getId(), p.getStatus(), p.getStartedAt(), p.getSubmittedAt());
     }
 }

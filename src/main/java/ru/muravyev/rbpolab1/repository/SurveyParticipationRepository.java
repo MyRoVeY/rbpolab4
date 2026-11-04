@@ -1,54 +1,16 @@
 package ru.muravyev.rbpolab1.repository;
 
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import ru.muravyev.rbpolab1.entity.ParticipationStatus;
 import ru.muravyev.rbpolab1.entity.SurveyParticipation;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-@Repository
-public class SurveyParticipationRepository {
+public interface SurveyParticipationRepository extends JpaRepository<SurveyParticipation, Long> {
 
-    private final Map<Long, SurveyParticipation> storage = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong();
+    boolean existsBySurvey_IdAndRespondent_Id(Long surveyId, Long respondentId);
 
-    public List<SurveyParticipation> findAll() {
-        return new ArrayList<>(storage.values());
-    }
+    List<SurveyParticipation> findBySurvey_IdAndStatus(Long surveyId, ParticipationStatus status);
 
-    public Optional<SurveyParticipation> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
-    }
-
-    public List<SurveyParticipation> findBySurveyId(Long surveyId) {
-        return storage.values().stream()
-                .filter(p -> p.getSurveyId().equals(surveyId))
-                .toList();
-    }
-
-    public List<SurveyParticipation> findByRespondentId(Long respondentId) {
-        return storage.values().stream()
-                .filter(p -> p.getRespondentId().equals(respondentId))
-                .toList();
-    }
-
-    public SurveyParticipation save(SurveyParticipation participation) {
-        if (participation.getId() == null) {
-            participation.setId(idGenerator.incrementAndGet());
-        }
-        storage.put(participation.getId(), participation);
-        return participation;
-    }
-
-    public void deleteById(Long id) {
-        storage.remove(id);
-    }
-
-    public boolean existsById(Long id) {
-        return storage.containsKey(id);
-    }
+    long countBySurvey_IdAndStatus(Long surveyId, ParticipationStatus status);
 }

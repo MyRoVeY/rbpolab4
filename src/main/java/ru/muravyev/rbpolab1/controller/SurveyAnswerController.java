@@ -50,7 +50,7 @@ public class SurveyAnswerController {
     }
 
     private SurveyAnswerResponse toResponse(SurveyAnswer a) {
-        return new SurveyAnswerResponse(a.getId(), a.getParticipationId(),
-                a.getQuestionId(), a.getValue());
+        return new SurveyAnswerResponse(a.getId(), a.getParticipation().getId(),
+                a.getQuestion().getId(), a.getValue());
     }
 }
