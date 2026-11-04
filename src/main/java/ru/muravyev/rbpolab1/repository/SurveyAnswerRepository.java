@@ -23,4 +23,7 @@ public interface SurveyAnswerRepository extends JpaRepository<SurveyAnswer, Long
             """)
     List<AnswerCountView> countAnswers(@Param("surveyId") Long surveyId,
                                        @Param("status") ParticipationStatus status);
+
+    List<SurveyAnswer> findByParticipation_Respondent_IdOrParticipation_Survey_Author_Id(
+            Long respondentId, Long authorId);
 }

@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.muravyev.rbpolab1.entity.*;
 import ru.muravyev.rbpolab1.exception.NotFoundException;
 import ru.muravyev.rbpolab1.repository.*;
+import ru.muravyev.rbpolab1.security.CurrentUser;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,25 +18,29 @@ public class SurveyParticipationService {
 
     private final SurveyParticipationRepository participationRepository;
     private final SurveyRepository surveyRepository;
-    private final UserRepository userRepository;
     private final SurveyQuestionRepository questionRepository;
     private final SurveyAnswerRepository answerRepository;
+    private final CurrentUser currentUser;
 
     public SurveyParticipationService(SurveyParticipationRepository participationRepository,
                                       SurveyRepository surveyRepository,
-                                      UserRepository userRepository,
                                       SurveyQuestionRepository questionRepository,
-                                      SurveyAnswerRepository answerRepository) {
+                                      SurveyAnswerRepository answerRepository,
+                                      CurrentUser currentUser) {
         this.participationRepository = participationRepository;
         this.surveyRepository = surveyRepository;
-        this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.answerRepository = answerRepository;
+        this.currentUser = currentUser;
     }
 
     @Transactional(readOnly = true)
     public List<SurveyParticipation> getAll() {
-        return participationRepository.findAll();
+        if (currentUser.isAdmin()) {
+            return participationRepository.findAll();
+        }
+        Long me = currentUser.id();
+        return participationRepository.findByRespondent_IdOrSurvey_Author_Id(me, me);
     }
 
     @Transactional(readOnly = true)
@@ -44,13 +49,15 @@ public class SurveyParticipationService {
                 .orElseThrow(() -> new NotFoundException("Participation " + id + " not found"));
     }
 
-    public SurveyParticipation create(Long surveyId, Long respondentId) {
+    public SurveyParticipation create(Long surveyId) {
         Survey survey = findSurvey(surveyId);
-        User respondent = findUser(respondentId);
+        User respondent = currentUser.get(); // респондент - тот, кто вошёл
+        if (survey.getAuthor().getId().equals(respondent.getId())) {
+            throw new IllegalStateException("Authors cannot participate in their own survey");
+        }
         checkSurveyOpen(survey);
-        if (participationRepository.existsBySurvey_IdAndRespondent_Id(surveyId, respondentId)) {
-            throw new IllegalStateException("User " + respondentId
-                    + " already participates in survey " + surveyId);
+        if (participationRepository.existsBySurvey_IdAndRespondent_Id(surveyId, respondent.getId())) {
+            throw new IllegalStateException("You already participate in survey " + surveyId);
         }
 
         SurveyParticipation participation = new SurveyParticipation();
@@ -135,13 +142,5 @@ public class SurveyParticipationService {
         }
         return surveyRepository.findById(surveyId)
                 .orElseThrow(() -> new NotFoundException("Survey " + surveyId + " not found"));
-    }
-
-    private User findUser(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("respondentId is required");
-        }
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User " + userId + " not found"));
     }
 }

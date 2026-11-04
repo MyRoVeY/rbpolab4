@@ -10,6 +10,7 @@ import ru.muravyev.rbpolab1.exception.NotFoundException;
 import ru.muravyev.rbpolab1.repository.SurveyAnswerRepository;
 import ru.muravyev.rbpolab1.repository.SurveyParticipationRepository;
 import ru.muravyev.rbpolab1.repository.SurveyQuestionRepository;
+import ru.muravyev.rbpolab1.security.CurrentUser;
 
 import java.util.List;
 
@@ -20,18 +21,25 @@ public class SurveyAnswerService {
     private final SurveyAnswerRepository answerRepository;
     private final SurveyParticipationRepository participationRepository;
     private final SurveyQuestionRepository questionRepository;
+    private final CurrentUser currentUser;
 
     public SurveyAnswerService(SurveyAnswerRepository answerRepository,
                                SurveyParticipationRepository participationRepository,
-                               SurveyQuestionRepository questionRepository) {
+                               SurveyQuestionRepository questionRepository,
+                               CurrentUser currentUser) {
         this.answerRepository = answerRepository;
         this.participationRepository = participationRepository;
         this.questionRepository = questionRepository;
+        this.currentUser = currentUser;
     }
 
     @Transactional(readOnly = true)
     public List<SurveyAnswer> getAll() {
-        return answerRepository.findAll();
+        if (currentUser.isAdmin()) {
+            return answerRepository.findAll();
+        }
+        Long me = currentUser.id();
+        return answerRepository.findByParticipation_Respondent_IdOrParticipation_Survey_Author_Id(me, me);
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +82,9 @@ public class SurveyAnswerService {
     }
 
     public void delete(Long id) {
-        answerRepository.delete(getById(id));
+        SurveyAnswer answer = getById(id);
+        checkInProgress(answer.getParticipation());
+        answerRepository.delete(answer);
     }
 
     private SurveyParticipation findParticipation(Long id) {

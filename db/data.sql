@@ -4,10 +4,15 @@
 SET ROLE survey_owner;
 
 -- id 1..3
-INSERT INTO app.users (name, email)
-VALUES ('Иван Петров', 'ivan@example.com'),
-       ('Мария Смирнова', 'maria@example.com'),
-       ('Олег Кузнецов', 'oleg@example.com');
+-- id 1..3 - обычные пользователи, id 4 - администратор.
+-- Пароли (только для тестового стенда!):
+--   ivan / Ivan2026!    maria / Maria2026!    oleg / Oleg2026!    admin / Admin2026!
+-- В БД хранятся только BCrypt-хэши.
+INSERT INTO app.users (username, password_hash, role, status, name, email)
+VALUES ('ivan',  '$2a$10$v3SuR6CCiqBeGXWwbJ56juG2bCYiaO08DhsEaFXfQlj.6neVCZANO', 'USER',  'ACTIVE', 'Иван Петров',    'ivan@example.com'),
+       ('maria', '$2a$10$v4ZWoHOaTafZRVD.QINy6eUrOXJYZhuLsPi9XeMQkNBWlQ7TRs03G', 'USER',  'ACTIVE', 'Мария Смирнова', 'maria@example.com'),
+       ('oleg',  '$2a$10$nkdQB/GUetoRG4auJG22ZeW6c0iCQQMPWdnGEgtJ5DMqp9HM/771.', 'USER',  'ACTIVE', 'Олег Кузнецов',  'oleg@example.com'),
+       ('admin', '$2a$10$6DASLvA7U9SiHS4.gUdPuuwcnB.ifyD6Low/4jcKhYAB29hPLzr5m', 'ADMIN', 'ACTIVE', 'Администратор',  'admin@example.com');
 
 -- 1: активный опрос Ивана, 2: черновик Ивана, 3: черновик Марии без вопросов
 INSERT INTO app.surveys (title, author_id, starts_at, ends_at, status)

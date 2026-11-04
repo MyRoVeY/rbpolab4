@@ -2,6 +2,7 @@ package ru.muravyev.rbpolab1.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.muravyev.rbpolab1.dto.SurveyAnswerRequest;
 import ru.muravyev.rbpolab1.dto.SurveyAnswerResponse;
@@ -28,22 +29,27 @@ public class SurveyAnswerController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@access.canViewAnswer(#id)")
     public SurveyAnswerResponse getById(@PathVariable Long id) {
         return toResponse(answerService.getById(id));
     }
 
+    // отвечать можно только в своём участии
     @PostMapping
+    @PreAuthorize("@access.isRespondent(#r.participationId())")
     public ResponseEntity<SurveyAnswerResponse> create(@RequestBody SurveyAnswerRequest r) {
         SurveyAnswer created = answerService.create(r.participationId(), r.questionId(), r.value());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@access.canEditAnswer(#id)")
     public SurveyAnswerResponse update(@PathVariable Long id, @RequestBody SurveyAnswerRequest r) {
         return toResponse(answerService.update(id, r.value()));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@access.canEditAnswer(#id)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         answerService.delete(id);
         return ResponseEntity.noContent().build();

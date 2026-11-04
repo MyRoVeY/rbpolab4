@@ -2,6 +2,7 @@ package ru.muravyev.rbpolab1.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.muravyev.rbpolab1.dto.SurveyParticipationRequest;
 import ru.muravyev.rbpolab1.dto.SurveyParticipationResponse;
@@ -28,30 +29,35 @@ public class SurveyParticipationController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@access.canViewParticipation(#id)")
     public SurveyParticipationResponse getById(@PathVariable Long id) {
         return toResponse(participationService.getById(id));
     }
 
     @PostMapping
     public ResponseEntity<SurveyParticipationResponse> create(@RequestBody SurveyParticipationRequest r) {
-        SurveyParticipation created = participationService.create(r.surveyId(), r.respondentId());
+        SurveyParticipation created = participationService.create(r.surveyId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@access.isRespondent(#id)")
     public SurveyParticipationResponse update(@PathVariable Long id,
                                               @RequestBody SurveyParticipationRequest r) {
         return toResponse(participationService.update(id, r.status()));
     }
 
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("@access.isRespondent(#id)")
+    public SurveyParticipationResponse submit(@PathVariable Long id) {
+        return toResponse(participationService.submit(id));
+    }
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("@access.canDeleteParticipation(#id)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         participationService.delete(id);
         return ResponseEntity.noContent().build();
-    }
-    @PostMapping("/{id}/submit")
-    public SurveyParticipationResponse submit(@PathVariable Long id) {
-        return toResponse(participationService.submit(id));
     }
 
     private SurveyParticipationResponse toResponse(SurveyParticipation p) {

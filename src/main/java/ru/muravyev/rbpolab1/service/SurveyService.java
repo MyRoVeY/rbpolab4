@@ -1,10 +1,12 @@
 package ru.muravyev.rbpolab1.service;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.muravyev.rbpolab1.entity.*;
 import ru.muravyev.rbpolab1.exception.NotFoundException;
 import ru.muravyev.rbpolab1.repository.*;
+import ru.muravyev.rbpolab1.security.CurrentUser;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -18,17 +20,20 @@ public class SurveyService {
     private final SurveyQuestionRepository questionRepository;
     private final SurveyParticipationRepository participationRepository;
     private final SurveyAnswerRepository answerRepository;
+    private final CurrentUser currentUser;
 
     public SurveyService(SurveyRepository surveyRepository,
                          UserRepository userRepository,
                          SurveyQuestionRepository questionRepository,
                          SurveyParticipationRepository participationRepository,
-                         SurveyAnswerRepository answerRepository) {
+                         SurveyAnswerRepository answerRepository,
+                         CurrentUser currentUser) {
         this.surveyRepository = surveyRepository;
         this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.participationRepository = participationRepository;
         this.answerRepository = answerRepository;
+        this.currentUser = currentUser;
     }
 
     @Transactional(readOnly = true)
@@ -42,19 +47,18 @@ public class SurveyService {
                 .orElseThrow(() -> new NotFoundException("Survey " + id + " not found"));
     }
 
-    public Survey create(String title, Long authorId, LocalDateTime startsAt,
+    public Survey create(String title, LocalDateTime startsAt,
                          LocalDateTime endsAt, SurveyStatus status) {
         if (status != null && status != SurveyStatus.DRAFT) {
             throw new IllegalArgumentException(
                     "A new survey is always created as DRAFT; use /publish to activate it");
         }
         checkTitle(title);
-        User author = findUser(authorId);
         checkDates(startsAt, endsAt);
 
         Survey survey = new Survey();
         survey.setTitle(title);
-        survey.setAuthor(author);
+        survey.setAuthor(currentUser.get()); // автор - тот, кто вошёл
         survey.setStartsAt(startsAt);
         survey.setEndsAt(endsAt);
         survey.setStatus(SurveyStatus.DRAFT);
@@ -72,7 +76,10 @@ public class SurveyService {
             checkTitle(title);
             survey.setTitle(title);
         }
-        if (authorId != null) {
+        if (authorId != null && !authorId.equals(survey.getAuthor().getId())) {
+            if (!currentUser.isAdmin()) {
+                throw new AccessDeniedException("Only an administrator can change the survey author");
+            }
             survey.setAuthor(findUser(authorId));
         }
         if (startsAt != null) {
@@ -125,9 +132,9 @@ public class SurveyService {
         return new SurveyCloseResult(survey, unfinished.size());
     }
 
-    public Survey copy(Long id, Long authorId) {
+    public Survey copy(Long id) {
         Survey source = getById(id);
-        User author = findUser(authorId);
+        User author = currentUser.get();
 
         String title = "Копия: " + source.getTitle();
         if (title.length() > 200) {
@@ -179,9 +186,6 @@ public class SurveyService {
     }
 
     private User findUser(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("authorId is required");
-        }
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User " + userId + " not found"));
     }

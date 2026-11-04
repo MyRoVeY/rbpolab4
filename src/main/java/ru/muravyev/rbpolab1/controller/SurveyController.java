@@ -2,14 +2,13 @@ package ru.muravyev.rbpolab1.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import ru.muravyev.rbpolab1.dto.SurveyRequest;
-import ru.muravyev.rbpolab1.dto.SurveyResponse;
-import ru.muravyev.rbpolab1.entity.Survey;
-import ru.muravyev.rbpolab1.service.SurveyService;
 import ru.muravyev.rbpolab1.dto.*;
+import ru.muravyev.rbpolab1.entity.Survey;
 import ru.muravyev.rbpolab1.service.SurveyCloseResult;
 import ru.muravyev.rbpolab1.service.SurveyResults;
+import ru.muravyev.rbpolab1.service.SurveyService;
 
 import java.util.List;
 
@@ -37,41 +36,44 @@ public class SurveyController {
 
     @PostMapping
     public ResponseEntity<SurveyResponse> create(@RequestBody SurveyRequest r) {
-        Survey created = surveyService.create(r.title(), r.authorId(),
-                r.startsAt(), r.endsAt(), r.status());
+        Survey created = surveyService.create(r.title(), r.startsAt(), r.endsAt(), r.status());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@access.canManageSurvey(#id)")
     public SurveyResponse update(@PathVariable Long id, @RequestBody SurveyRequest r) {
         return toResponse(surveyService.update(id, r.title(), r.authorId(),
                 r.startsAt(), r.endsAt(), r.status()));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@access.canManageSurvey(#id)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         surveyService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/{id}/publish")
+    @PreAuthorize("@access.canManageSurvey(#id)")
     public SurveyResponse publish(@PathVariable Long id) {
         return toResponse(surveyService.publish(id));
     }
 
     @PostMapping("/{id}/close")
+    @PreAuthorize("@access.canManageSurvey(#id)")
     public SurveyCloseResponse close(@PathVariable Long id) {
         SurveyCloseResult result = surveyService.close(id);
         return new SurveyCloseResponse(toResponse(result.survey()), result.abandonedParticipations());
     }
 
     @PostMapping("/{id}/copy")
-    public ResponseEntity<SurveyResponse> copy(@PathVariable Long id,
-                                               @RequestBody SurveyCopyRequest request) {
-        Survey copy = surveyService.copy(id, request.authorId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(copy));
+    public ResponseEntity<SurveyResponse> copy(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(surveyService.copy(id)));
     }
 
     @GetMapping("/{id}/results")
+    @PreAuthorize("@access.canManageSurvey(#id)")
     public SurveyResultsResponse results(@PathVariable Long id) {
         SurveyResults r = surveyService.results(id);
         List<QuestionResultResponse> questions = r.questions().stream()

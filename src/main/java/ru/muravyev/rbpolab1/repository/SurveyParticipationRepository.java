@@ -13,4 +13,6 @@ public interface SurveyParticipationRepository extends JpaRepository<SurveyParti
     List<SurveyParticipation> findBySurvey_IdAndStatus(Long surveyId, ParticipationStatus status);
 
     long countBySurvey_IdAndStatus(Long surveyId, ParticipationStatus status);
+
+    List<SurveyParticipation> findByRespondent_IdOrSurvey_Author_Id(Long respondentId, Long authorId);
 }
