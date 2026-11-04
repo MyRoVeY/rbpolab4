@@ -61,7 +61,6 @@ public class SurveyParticipationService {
         return participationRepository.save(participation);
     }
 
-    // PATCH: респондент может только бросить прохождение. Отправка - через /submit
     public SurveyParticipation update(Long id, ParticipationStatus newStatus) {
         SurveyParticipation participation = getById(id);
         if (newStatus == null || newStatus == participation.getStatus()) {
@@ -80,11 +79,8 @@ public class SurveyParticipationService {
     }
 
     public void delete(Long id) {
-        // ответы участия удалит БД (ON DELETE CASCADE)
         participationRepository.delete(getById(id));
     }
-
-    // ---------------- Бизнес-операция 3: отправка участия ----------------
 
     public SurveyParticipation submit(Long id) {
         SurveyParticipation participation = getById(id);
@@ -93,7 +89,6 @@ public class SurveyParticipationService {
                     + participation.getStatus());
         }
 
-        // блокируем опрос, чтобы его нельзя было закрыть одновременно с отправкой
         Long surveyId = participation.getSurvey().getId();
         Survey survey = surveyRepository.findByIdForUpdate(surveyId)
                 .orElseThrow(() -> new NotFoundException("Survey " + surveyId + " not found"));
@@ -120,8 +115,6 @@ public class SurveyParticipationService {
         participation.setSubmittedAt(now);
         return participation;
     }
-
-    // ---------------- вспомогательные ----------------
 
     private void checkSurveyOpen(Survey survey) {
         if (survey.getStatus() != SurveyStatus.ACTIVE) {

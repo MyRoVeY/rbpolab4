@@ -11,7 +11,6 @@ import java.util.Optional;
 
 public interface SurveyRepository extends JpaRepository<Survey, Long> {
 
-    // SELECT ... FOR UPDATE: строка опроса блокируется до конца транзакции
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Survey s where s.id = :id")
     Optional<Survey> findByIdForUpdate(@Param("id") Long id);

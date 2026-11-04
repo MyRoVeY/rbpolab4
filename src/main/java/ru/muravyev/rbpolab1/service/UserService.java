@@ -52,7 +52,6 @@ public class UserService {
     }
 
     public void delete(Long id) {
-        // опросы и участия пользователя удалит БД (ON DELETE CASCADE)
         userRepository.delete(getById(id));
     }
 

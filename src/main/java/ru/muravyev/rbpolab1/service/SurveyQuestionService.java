@@ -79,7 +79,6 @@ public class SurveyQuestionService {
     public void delete(Long id) {
         SurveyQuestion question = getById(id);
         checkDraft(question.getSurvey());
-        // ответы на вопрос удалит БД (ON DELETE CASCADE)
         questionRepository.delete(question);
     }
 

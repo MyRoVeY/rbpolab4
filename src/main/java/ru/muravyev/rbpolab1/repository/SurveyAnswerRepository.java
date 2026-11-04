@@ -14,7 +14,6 @@ public interface SurveyAnswerRepository extends JpaRepository<SurveyAnswer, Long
 
     List<SurveyAnswer> findByParticipation_Id(Long participationId);
 
-    // Сколько раз выбран каждый вариант каждого вопроса (только в участиях с нужным статусом)
     @Query("""
             select a.question.id as questionId, a.value as optionValue, count(a) as total
             from SurveyAnswer a

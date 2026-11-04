@@ -31,8 +31,6 @@ public class SurveyService {
         this.answerRepository = answerRepository;
     }
 
-    // ---------------- CRUD ----------------
-
     @Transactional(readOnly = true)
     public List<Survey> getAll() {
         return surveyRepository.findAll();
@@ -88,11 +86,8 @@ public class SurveyService {
     }
 
     public void delete(Long id) {
-        // вопросы, варианты, участия и ответы удалит БД (ON DELETE CASCADE)
         surveyRepository.delete(getById(id));
     }
-
-    // ---------------- Бизнес-операция 1: публикация ----------------
 
     public Survey publish(Long id) {
         Survey survey = getById(id);
@@ -114,8 +109,6 @@ public class SurveyService {
         return survey;
     }
 
-    // ---------------- Бизнес-операция 2: закрытие ----------------
-
     public SurveyCloseResult close(Long id) {
         Survey survey = surveyRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Survey " + id + " not found"));
@@ -132,8 +125,6 @@ public class SurveyService {
         return new SurveyCloseResult(survey, unfinished.size());
     }
 
-    // ---------------- Бизнес-операция 4: копирование ----------------
-
     public Survey copy(Long id, Long authorId) {
         Survey source = getById(id);
         User author = findUser(authorId);
@@ -146,7 +137,7 @@ public class SurveyService {
         Survey copy = new Survey();
         copy.setTitle(title);
         copy.setAuthor(author);
-        copy.setStatus(SurveyStatus.DRAFT);  // сроки у копии задаются заново
+        copy.setStatus(SurveyStatus.DRAFT);
         copy.setCreatedAt(LocalDateTime.now());
         surveyRepository.save(copy);
 
@@ -161,8 +152,6 @@ public class SurveyService {
         return copy;
     }
 
-    // ---------------- Бизнес-операция 5: итоги ----------------
-
     @Transactional(readOnly = true)
     public SurveyResults results(Long id) {
         Survey survey = getById(id);
@@ -171,7 +160,6 @@ public class SurveyService {
         }
         long submitted = participationRepository.countBySurvey_IdAndStatus(id, ParticipationStatus.SUBMITTED);
 
-        // questionId -> (вариант -> количество)
         Map<Long, Map<String, Long>> counts = new HashMap<>();
         for (AnswerCountView row : answerRepository.countAnswers(id, ParticipationStatus.SUBMITTED)) {
             counts.computeIfAbsent(row.getQuestionId(), k -> new HashMap<>())
@@ -189,8 +177,6 @@ public class SurveyService {
         }
         return new SurveyResults(survey, submitted, stats);
     }
-
-    // ---------------- вспомогательные ----------------
 
     private User findUser(Long userId) {
         if (userId == null) {
